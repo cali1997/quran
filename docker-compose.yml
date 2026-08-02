@@ -1,0 +1,41 @@
+services:
+  db:
+    image: mariadb:11.4
+    container_name: quran_db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: quran_school
+      MARIADB_USER: quran_user
+      MARIADB_PASSWORD: quran_pass
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quran_web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_ENV: production
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: quran_school
+      DB_USER: quran_user
+      DB_PASSWORD: quran_pass
+      SECRET_KEY: super-secret-key
+    ports:
+      - "5000:5000"
+
+volumes:
+  mariadb_data:

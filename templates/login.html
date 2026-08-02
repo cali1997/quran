@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <main class="login-layout">
+    <section class="card login-card">
+      <h1>Admin Login</h1>
+      <p>Log in om de Quran adminpagina te openen.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-wrap">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form action="{{ url_for('login') }}" method="post" class="progress-form">
+        <label>
+          Gebruikersnaam
+          <input type="text" name="username" required />
+        </label>
+
+        <label>
+          Wachtwoord
+          <input type="password" name="password" required />
+        </label>
+
+        <button type="submit">Inloggen</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quran Leerling Volgsysteem</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <main class="layout">
+    <section class="card form-card">
+      <div class="top-actions">
+        <form action="{{ url_for('logout') }}" method="post">
+          <button type="submit" class="logout-btn">Uitloggen</button>
+        </form>
+      </div>
+
+      <h1>Quran Leerling Volgsysteem</h1>
+      <p>Schrijf hier in waar een leerling is gebleven en keur een afgeronde juz goed.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-wrap">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form action="{{ url_for('add_progress') }}" method="post" class="progress-form">
+        <label>
+          Naam leerling
+          <input type="text" name="student_name" required />
+        </label>
+
+        <label>
+          Juz nummer
+          <input type="number" name="juz_number" min="1" max="30" required />
+        </label>
+
+        <label>
+          Ayah (bijv. 2:255)
+          <input type="text" name="ayah_reference" required />
+        </label>
+
+        <label>
+          Aanwezigheid
+          <select name="presence" required>
+            <option value="present">Aanwezig</option>
+            <option value="absent">Afwezig</option>
+          </select>
+        </label>
+
+        <p class="auto-time-note">Datum en tijd worden automatisch opgeslagen.</p>
+
+        <button type="submit">Opslaan</button>
+      </form>
+    </section>
+
+    <section class="card table-card">
+      <div class="table-header">
+        <h2>Overzicht leerlingen</h2>
+        <form action="{{ url_for('index') }}" method="get" class="search-form">
+          <input
+            type="text"
+            name="search_name"
+            placeholder="Zoek op naam leerling"
+            value="{{ search_name }}"
+          />
+          <button type="submit">Zoeken</button>
+        </form>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>Juz</th>
+              <th>Ayah</th>
+              <th>Datum/Tijd</th>
+              <th>Aanwezigheid</th>
+              <th>Status</th>
+              <th>Feedback</th>
+              <th>Actie</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in progress_rows %}
+              <tr>
+                <td>{{ row.student_name }}</td>
+                <td>{{ row.juz_number }}</td>
+                <td>{{ row.ayah_reference }}</td>
+                <td>{{ row.recorded_at.strftime('%d-%m-%Y %H:%M') }}</td>
+                <td>
+                  {% if row.is_present %}
+                    <span class="status present">Aanwezig</span>
+                  {% else %}
+                    <span class="status absent">Afwezig</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if row.is_approved %}
+                    <span class="status approved">Goedgekeurd</span>
+                  {% else %}
+                    <span class="status pending">Nog niet goedgekeurd</span>
+                  {% endif %}
+                </td>
+                <td class="feedback-cell">
+                  <form action="{{ url_for('update_progress', row_id=row.id, search_name=search_name) }}" method="post" class="feedback-form">
+                    <input type="text" name="ayah_reference" value="{{ row.ayah_reference }}" placeholder="Ayah" required />
+                    <select name="presence" required>
+                      <option value="present" {% if row.is_present %}selected{% endif %}>Aanwezig</option>
+                      <option value="absent" {% if not row.is_present %}selected{% endif %}>Afwezig</option>
+                    </select>
+                    <textarea name="feedback" rows="2" placeholder="Schrijf feedback...">{{ row.feedback or '' }}</textarea>
+                    <button type="submit" class="save-btn">Opslaan</button>
+                  </form>
+                </td>
+                <td>
+                  <div class="action-buttons">
+                    <a href="{{ url_for('download_student_pdf', row_id=row.id) }}" class="pdf-btn">PDF</a>
+
+                    {% if not row.is_approved %}
+                      <form action="{{ url_for('approve', row_id=row.id, search_name=search_name) }}" method="post">
+                        <button type="submit" class="approve-btn">Keur juz af</button>
+                      </form>
+                    {% else %}
+                      <span class="approved-time">
+                        {{ row.approved_at.strftime('%d-%m-%Y %H:%M') if row.approved_at else '-' }}
+                      </span>
+                    {% endif %}
+
+                    <form action="{{ url_for('delete_progress', row_id=row.id, search_name=search_name) }}" method="post">
+                      <button
+                        type="submit"
+                        class="delete-btn"
+                        onclick="return confirm('Weet je zeker dat je deze leerling wilt verwijderen?');"
+                      >
+                        Verwijderen
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="8" class="empty">Nog geen data ingevoerd.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
