@@ -17,7 +17,10 @@ docker compose up --build
 ```
 
 3. Open de website op:
-- http://localhost:5000
+- http://localhost:5050
+
+4. MariaDB extern bereikbaar op:
+- localhost:3307
 
 ## Stoppen
 

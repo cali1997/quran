@@ -11,6 +11,8 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3307:3306"
     healthcheck:
       test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-prootpassword"]
       interval: 5s
@@ -35,7 +37,7 @@ services:
       DB_PASSWORD: quran_pass
       SECRET_KEY: super-secret-key
     ports:
-      - "5000:5000"
+      - "5050:5000"
 
 volumes:
   mariadb_data:
