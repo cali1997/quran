@@ -309,7 +309,13 @@
                     {% for row in progress_rows[:6] %}
                       <tr>
                         <td>{{ row.student_name }}</td>
-                        <td>{{ row.ayah_reference }}</td>
+                        <td>
+                          <form action="{{ url_for('update_homework', row_id=row.id, search_name=search_name) }}" method="post" class="homework-edit-form">
+                            <input type="hidden" name="homework" value="{{ 'done' if row.homework_done else 'open' }}" />
+                            <input type="text" name="ayah_reference" value="{{ row.ayah_reference }}" aria-label="Surah en ayah voor {{ row.student_name }}" />
+                            <button type="submit" class="save-btn">Opslaan</button>
+                          </form>
+                        </td>
                         <td>
                           <form action="{{ url_for('update_homework', row_id=row.id, search_name=search_name) }}" method="post" class="att-toggle-form">
                             <input type="hidden" name="homework" value="done" />

@@ -892,16 +892,24 @@ def update_attendance(row_id):
 def update_homework(row_id):
     search_name = request.args.get("search_name", "").strip()
     homework_value = request.form.get("homework", "open")
+    ayah_reference = request.form.get("ayah_reference", "").strip()
 
     if homework_value not in {"done", "open"}:
         flash("Ongeldige huiswerkstatus.", "error")
         return redirect(url_for("index", search_name=search_name))
 
     row = get_admin_row_or_404(row_id)
+
+    if ayah_reference:
+        row.ayah_reference = ayah_reference
+
     row.homework_done = bool_from_homework(homework_value)
     db.session.commit()
 
-    flash(f"Huiswerkstatus aangepast voor {row.student_name}.", "success")
+    if ayah_reference:
+        flash(f"Huiswerk en ayah aangepast voor {row.student_name}.", "success")
+    else:
+        flash(f"Huiswerkstatus aangepast voor {row.student_name}.", "success")
     return redirect(url_for("index", search_name=search_name))
 
 
