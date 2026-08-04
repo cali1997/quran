@@ -81,8 +81,18 @@
             </label>
 
             <label>
-              Ayah (bijv. 2:255)
-              <input type="text" name="ayah_reference" required />
+              Surah
+              <select name="surah_name" required>
+                <option value="" selected disabled>Kies surah...</option>
+                {% for surah_name in surah_options %}
+                  <option value="{{ surah_name }}">{{ surah_name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+
+            <label>
+              Ayah nummer
+              <input type="text" name="ayah_number" placeholder="Bijv. 255" required />
             </label>
 
             <p class="auto-time-note">Datum en tijd worden automatisch opgeslagen.</p>
@@ -290,7 +300,7 @@
                   <thead>
                     <tr>
                       <th>Naam leerling</th>
-                      <th>Ayah</th>
+                      <th>Surah/Ayah</th>
                       <th>Ingeleverd</th>
                       <th>Nog open</th>
                     </tr>

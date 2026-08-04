@@ -37,6 +37,123 @@ PDF_ARABIC_FONT_NAME = "Helvetica"
 PDF_FONT_REGISTERED = False
 PDF_SIDE_IMAGE = None
 
+SURAH_OPTIONS = [
+    "Al-Fatihah",
+    "Al-Baqarah",
+    "Ali 'Imran",
+    "An-Nisa",
+    "Al-Ma'idah",
+    "Al-An'am",
+    "Al-A'raf",
+    "Al-Anfal",
+    "At-Tawbah",
+    "Yunus",
+    "Hud",
+    "Yusuf",
+    "Ar-Ra'd",
+    "Ibrahim",
+    "Al-Hijr",
+    "An-Nahl",
+    "Al-Isra",
+    "Al-Kahf",
+    "Maryam",
+    "Ta-Ha",
+    "Al-Anbiya",
+    "Al-Hajj",
+    "Al-Mu'minun",
+    "An-Nur",
+    "Al-Furqan",
+    "Ash-Shu'ara",
+    "An-Naml",
+    "Al-Qasas",
+    "Al-'Ankabut",
+    "Ar-Rum",
+    "Luqman",
+    "As-Sajdah",
+    "Al-Ahzab",
+    "Saba",
+    "Fatir",
+    "Ya-Sin",
+    "As-Saffat",
+    "Sad",
+    "Az-Zumar",
+    "Ghafir",
+    "Fussilat",
+    "Ash-Shuraa",
+    "Az-Zukhruf",
+    "Ad-Dukhan",
+    "Al-Jathiyah",
+    "Al-Ahqaf",
+    "Muhammad",
+    "Al-Fath",
+    "Al-Hujurat",
+    "Qaf",
+    "Adh-Dhariyat",
+    "At-Tur",
+    "An-Najm",
+    "Al-Qamar",
+    "Ar-Rahman",
+    "Al-Waqi'ah",
+    "Al-Hadid",
+    "Al-Mujadilah",
+    "Al-Hashr",
+    "Al-Mumtahanah",
+    "As-Saff",
+    "Al-Jumu'ah",
+    "Al-Munafiqun",
+    "At-Taghabun",
+    "At-Talaq",
+    "At-Tahrim",
+    "Al-Mulk",
+    "Al-Qalam",
+    "Al-Haqqah",
+    "Al-Ma'arij",
+    "Nuh",
+    "Al-Jinn",
+    "Al-Muzzammil",
+    "Al-Muddaththir",
+    "Al-Qiyamah",
+    "Al-Insan",
+    "Al-Mursalat",
+    "An-Naba",
+    "An-Nazi'at",
+    "Abasa",
+    "At-Takwir",
+    "Al-Infitar",
+    "Al-Mutaffifin",
+    "Al-Inshiqaq",
+    "Al-Buruj",
+    "At-Tariq",
+    "Al-A'la",
+    "Al-Ghashiyah",
+    "Al-Fajr",
+    "Al-Balad",
+    "Ash-Shams",
+    "Al-Layl",
+    "Ad-Duhaa",
+    "Ash-Sharh",
+    "At-Tin",
+    "Al-'Alaq",
+    "Al-Qadr",
+    "Al-Bayyinah",
+    "Az-Zalzalah",
+    "Al-'Adiyat",
+    "Al-Qari'ah",
+    "At-Takathur",
+    "Al-'Asr",
+    "Al-Humazah",
+    "Al-Fil",
+    "Quraysh",
+    "Al-Ma'un",
+    "Al-Kawthar",
+    "Al-Kafirun",
+    "An-Nasr",
+    "Al-Masad",
+    "Al-Ikhlas",
+    "Al-Falaq",
+    "An-Nas",
+]
+
 
 class StudentProgress(db.Model):
     __tablename__ = "student_progress"
@@ -197,6 +314,10 @@ def split_surah_ayah(ayah_reference):
         surah_part, ayah_part = cleaned.split(":", 1)
         return surah_part.strip() or "-", ayah_part.strip() or "-"
     return "-", cleaned or "-"
+
+
+def combine_surah_ayah(surah_name, ayah_number):
+    return f"{surah_name.strip()}:{ayah_number.strip()}"
 
 
 def register_pdf_fonts_once():
@@ -503,6 +624,7 @@ def index():
         selected_feedback_row=selected_feedback_row,
         result_name=result_name,
         selected_result_row=selected_result_row,
+        surah_options=SURAH_OPTIONS,
     )
 
 
@@ -525,13 +647,20 @@ def add_progress():
         student_name = new_student_name
 
     juz_number_raw = request.form.get("juz_number", "").strip()
-    ayah_reference = request.form.get("ayah_reference", "").strip()
+    surah_name = request.form.get("surah_name", "").strip()
+    ayah_number = request.form.get("ayah_number", "").strip()
     attendance_value = request.form.get("attendance_status", "present")
     homework_value = request.form.get("homework", "open")
 
-    if not student_name or not juz_number_raw or not ayah_reference:
+    if not student_name or not juz_number_raw or not surah_name or not ayah_number:
         flash("Vul alle velden in.", "error")
         return redirect(url_for("index"))
+
+    if surah_name not in SURAH_OPTIONS:
+        flash("Kies een geldige surah.", "error")
+        return redirect(url_for("index"))
+
+    ayah_reference = combine_surah_ayah(surah_name, ayah_number)
 
     if not is_valid_attendance(attendance_value):
         flash("Ongeldige aanwezigheidsstatus.", "error")

@@ -126,6 +126,16 @@ body {
   grid-template-columns: 1fr;
 }
 
+.sheet-grid > *,
+.report-panel,
+.entry-panel,
+.report-block,
+.progress-form,
+.feedback-editor-form,
+.feedback-selector-form {
+  min-width: 0;
+}
+
 .entry-panel,
 .report-block {
   border: 1px solid var(--line-strong);
@@ -273,6 +283,7 @@ button:hover {
 
 .table-wrap {
   overflow-x: auto;
+  max-width: 100%;
 }
 
 .sheet-table {
@@ -592,25 +603,114 @@ button:hover {
 
 @media (max-width: 640px) {
   .sheet-shell {
-    width: 97vw;
+    width: min(100%, 100vw);
+    margin: 0;
   }
 
   .sheet-page {
-    padding: 0.7rem;
+    padding: 0.65rem;
+    border-left: 0;
+    border-right: 0;
+    box-shadow: none;
   }
 
   .sheet-title-row {
     grid-template-columns: 1fr;
+    gap: 0.45rem;
+    padding-bottom: 0.55rem;
   }
 
   .quran-icon {
-    width: 72px;
-    height: 72px;
+    width: 58px;
+    height: 58px;
     margin: 0 auto;
   }
 
+  .sheet-title-row h1 {
+    font-size: 1.95rem;
+    line-height: 1.15;
+  }
+
+  .hero-arabic {
+    font-size: 1.15rem;
+  }
+
+  .hero-welcome {
+    font-size: 0.9rem;
+  }
+
+  .toolbar-row,
+  .toolbar-actions,
+  .search-form {
+    display: grid;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .toolbar-actions form,
+  .toolbar-actions a,
+  .search-form select,
+  .search-form input,
+  .progress-form button,
+  .feedback-editor-form button,
+  .feedback-selector-form select,
+  .pdf-btn,
+  .logout-btn,
+  .delete-btn,
+  .save-btn {
+    width: 100%;
+  }
+
+  .search-form select,
   .search-form input {
-    min-width: 150px;
-    flex: 1;
+    min-width: 0;
+  }
+
+  .entry-panel,
+  .report-block,
+  .card {
+    padding: 0.75rem;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    min-height: 44px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sheet-table {
+    font-size: 0.8rem;
+  }
+
+  .sheet-table th,
+  .sheet-table td {
+    padding: 0.28rem 0.3rem;
+  }
+
+  .ring {
+    width: 132px;
+    height: 132px;
+  }
+
+  .action-buttons,
+  .confirm-actions {
+    display: grid;
+    width: 100%;
+  }
+
+  .feedback-cell {
+    min-width: 200px;
+  }
+
+  .login-layout {
+    width: min(100%, 100vw);
+    margin: 0;
+    padding: 1rem 0.65rem;
   }
 }
