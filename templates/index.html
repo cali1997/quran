@@ -7,16 +7,43 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
 </head>
 <body>
-  <main class="layout">
-    <section class="card form-card">
-      <div class="top-actions">
+  <main class="sheet-shell">
+    <div class="toolbar-row">
+      <form action="{{ url_for('index') }}" method="get" class="search-form">
+        <select name="search_name" onchange="this.form.submit()" aria-label="Filter leerling">
+          <option value="" {% if not search_name %}selected{% endif %}>Alle leerlingen</option>
+          {% for student_name in student_names %}
+            <option value="{{ student_name }}" {% if search_name == student_name %}selected{% endif %}>{{ student_name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <div class="toolbar-actions">
+        <a href="{{ url_for('rapport_page') }}" class="pdf-btn">Open rapportpagina</a>
         <form action="{{ url_for('logout') }}" method="post">
           <button type="submit" class="logout-btn">Uitloggen</button>
         </form>
       </div>
+    </div>
 
-      <h1>Quran Leerling Volgsysteem</h1>
-      <p>Schrijf hier in waar een leerling is gebleven en keur een afgeronde juz goed.</p>
+    <section class="sheet-page">
+      <div class="hero-blessing">
+        <p class="hero-arabic">بسم الله الرحمن الرحيم</p>
+        <p class="hero-welcome">welkom معلم عدنان</p>
+      </div>
+
+      <header class="sheet-title-row">
+        <img
+          src="{{ url_for('static', filename='holy-quran-9988617.webp') }}"
+          alt="Quran icoon links"
+          class="quran-icon"
+        />
+        <h1>{{ today_label }}</h1>
+        <img
+          src="{{ url_for('static', filename='holy-quran-9988617.webp') }}"
+          alt="Quran icoon rechts"
+          class="quran-icon"
+        />
+      </header>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -28,130 +55,563 @@
         {% endif %}
       {% endwith %}
 
-      <form action="{{ url_for('add_progress') }}" method="post" class="progress-form">
-        <label>
-          Naam leerling
-          <input type="text" name="student_name" required />
-        </label>
+      <div class="sheet-grid">
+        <aside class="entry-panel">
+          <h2>Nieuwe invoer</h2>
+          <p>Schrijf direct de voortgang van een leerling bij.</p>
+          <form action="{{ url_for('add_progress') }}" method="post" class="progress-form">
+            <label>
+              Naam leerling
+              <select name="student_choice" id="student-choice" required>
+                <option value="__new__">Nieuwe leerling...</option>
+                {% for student_name in student_names %}
+                  <option value="{{ student_name }}">{{ student_name }}</option>
+                {% endfor %}
+              </select>
+            </label>
 
-        <label>
-          Juz nummer
-          <input type="number" name="juz_number" min="1" max="30" required />
-        </label>
+            <label id="new-student-wrap">
+              Nieuwe naam leerling
+              <input type="text" name="student_name_new" id="student-name-new" />
+            </label>
 
-        <label>
-          Ayah (bijv. 2:255)
-          <input type="text" name="ayah_reference" required />
-        </label>
+            <label>
+              Juz nummer
+              <input type="number" name="juz_number" min="1" max="30" required />
+            </label>
 
-        <label>
-          Aanwezigheid
-          <select name="presence" required>
-            <option value="present">Aanwezig</option>
-            <option value="absent">Afwezig</option>
-          </select>
-        </label>
+            <label>
+              Ayah (bijv. 2:255)
+              <input type="text" name="ayah_reference" required />
+            </label>
 
-        <p class="auto-time-note">Datum en tijd worden automatisch opgeslagen.</p>
+            <p class="auto-time-note">Datum en tijd worden automatisch opgeslagen.</p>
+            <button type="submit">Opslaan</button>
+          </form>
 
-        <button type="submit">Opslaan</button>
-      </form>
-    </section>
+          <hr class="entry-divider" />
+          <h3>Leerling verwijderen</h3>
+          <form
+            id="delete-by-name-form"
+            action="{{ url_for('delete_by_name', search_name=search_name) }}"
+            method="post"
+            class="progress-form"
+          >
+            <label>
+              Kies leerling
+              <select name="student_name" id="delete-student-name" required>
+                <option value="" selected disabled>Selecteer leerling...</option>
+                {% for student_name in student_names %}
+                  <option value="{{ student_name }}">{{ student_name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <button type="submit" class="delete-btn">Verwijder leerling</button>
+          </form>
 
-    <section class="card table-card">
-      <div class="table-header">
-        <h2>Overzicht leerlingen</h2>
-        <form action="{{ url_for('index') }}" method="get" class="search-form">
-          <input
-            type="text"
-            name="search_name"
-            placeholder="Zoek op naam leerling"
-            value="{{ search_name }}"
-          />
-          <button type="submit">Zoeken</button>
-        </form>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Juz</th>
-              <th>Ayah</th>
-              <th>Datum/Tijd</th>
-              <th>Aanwezigheid</th>
-              <th>Status</th>
-              <th>Feedback</th>
-              <th>Actie</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in progress_rows %}
-              <tr>
-                <td>{{ row.student_name }}</td>
-                <td>{{ row.juz_number }}</td>
-                <td>{{ row.ayah_reference }}</td>
-                <td>{{ row.recorded_at.strftime('%d-%m-%Y %H:%M') }}</td>
-                <td>
-                  {% if row.is_present %}
-                    <span class="status present">Aanwezig</span>
-                  {% else %}
-                    <span class="status absent">Afwezig</span>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if row.is_approved %}
-                    <span class="status approved">Goedgekeurd</span>
-                  {% else %}
-                    <span class="status pending">Nog niet goedgekeurd</span>
-                  {% endif %}
-                </td>
-                <td class="feedback-cell">
-                  <form action="{{ url_for('update_progress', row_id=row.id, search_name=search_name) }}" method="post" class="feedback-form">
-                    <input type="text" name="ayah_reference" value="{{ row.ayah_reference }}" placeholder="Ayah" required />
-                    <select name="presence" required>
-                      <option value="present" {% if row.is_present %}selected{% endif %}>Aanwezig</option>
-                      <option value="absent" {% if not row.is_present %}selected{% endif %}>Afwezig</option>
-                    </select>
-                    <textarea name="feedback" rows="2" placeholder="Schrijf feedback...">{{ row.feedback or '' }}</textarea>
-                    <button type="submit" class="save-btn">Opslaan</button>
-                  </form>
-                </td>
-                <td>
-                  <div class="action-buttons">
-                    <a href="{{ url_for('download_student_pdf', row_id=row.id) }}" class="pdf-btn">PDF</a>
+          <hr class="entry-divider" />
+          <h3>PDF totaalrapport</h3>
+          <form action="{{ url_for('download_all_students_pdf') }}" method="get" class="progress-form">
+            <button type="submit" class="pdf-btn">Download 1 PDF met alle info</button>
+          </form>
+        </aside>
 
-                    {% if not row.is_approved %}
-                      <form action="{{ url_for('approve', row_id=row.id, search_name=search_name) }}" method="post">
-                        <button type="submit" class="approve-btn">Keur juz af</button>
-                      </form>
+        <div class="report-panel">
+          <section class="report-block">
+            <h3>Dagplanning</h3>
+            <div class="table-wrap">
+              <table class="sheet-table compact-table">
+                <thead>
+                  <tr>
+                    <th>Datum</th>
+                    <th>Activiteit</th>
+                    <th>Duur</th>
+                    <th>Tijd start</th>
+                    <th>Tijd eind</th>
+                    <th>Beschrijving activiteit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span id="plan-date-preview">-</span></td>
+                    <td>
+                      <select id="plan-activity-input" aria-label="Activiteit" required>
+                        {% for option in activities %}
+                          <option value="{{ option }}">{{ option }}</option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                    <td>
+                      <select id="plan-duration-input" aria-label="Duur">
+                        <option value="15" selected>15 min</option>
+                        <option value="30">30 min</option>
+                        <option value="45">45 min</option>
+                        <option value="60">60 min</option>
+                        <option value="90">90 min</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input type="time" id="plan-start-input" value="19:00" aria-label="Starttijd" />
+                    </td>
+                    <td><span id="plan-end-preview">19:15</span></td>
+                    <td>
+                      <input
+                        type="text"
+                        id="plan-description-input"
+                        placeholder="Beschrijving activiteit"
+                        aria-label="Beschrijving"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <form id="plan-add-form" class="plan-add-form" autocomplete="off">
+              <button type="submit">Opslaan</button>
+            </form>
+
+            <h4 class="plan-saved-title">Opgeslagen onder Dagplanning</h4>
+            <div class="table-wrap">
+              <table class="sheet-table compact-table">
+                <thead>
+                  <tr>
+                    <th>Datum</th>
+                    <th>Activiteit</th>
+                    <th>Duur</th>
+                    <th>Tijd start</th>
+                    <th>Tijd eind</th>
+                    <th>Beschrijving activiteit</th>
+                    <th>Actie</th>
+                  </tr>
+                </thead>
+                <tbody id="plan-saved-body">
+                  <tr>
+                    <td colspan="7" class="empty">Nog geen activiteiten opgeslagen.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="chart-row">
+            <section class="report-block chart-card">
+              <h3>Aanwezigheid</h3>
+              <div
+                class="ring attendance-ring"
+                style="--present: {{ presence_pct }}; --absent: {{ absent_pct }}; --late: {{ late_pct }};"
+              >
+                <strong>{{ presence_pct }}%</strong>
+              </div>
+              <p>Aanwezig: {{ present_count }} | Afwezig: {{ absent_count }} | Te laat: {{ late_count }}</p>
+            </section>
+
+            <section class="report-block chart-card">
+              <h3>Huiswerk</h3>
+              <div
+                class="ring homework-ring"
+                style="--done: {{ homework_pct }}; --open: {{ homework_open_pct }};"
+              >
+                <strong>{{ homework_pct }}%</strong>
+              </div>
+              <p>Ingeleverd: {{ homework_done_count }} | Open: {{ homework_open_count }}</p>
+            </section>
+          </div>
+
+          <div class="tables-row">
+            <section class="report-block">
+              <h3>Aanwezigheid</h3>
+              <div class="table-wrap">
+                <table class="sheet-table compact-table attendance-table">
+                  <thead>
+                    <tr>
+                      <th class="col-name">Naam leerling</th>
+                      <th class="col-present">Aanwezig</th>
+                      <th class="col-absent">Afwezig</th>
+                      <th class="col-late">Te laat</th>
+                      <th class="col-progress">Voortgang</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in progress_rows %}
+                      <tr>
+                        <td>{{ row.student_name }}</td>
+                        <td>
+                          <form action="{{ url_for('update_attendance', row_id=row.id, search_name=search_name) }}" method="post" class="att-toggle-form">
+                            <input type="hidden" name="attendance_status" value="present" />
+                            <button type="submit" class="att-mark {% if row.attendance_status == 'present' %}active{% endif %}">x</button>
+                          </form>
+                        </td>
+                        <td>
+                          <form action="{{ url_for('update_attendance', row_id=row.id, search_name=search_name) }}" method="post" class="att-toggle-form">
+                            <input type="hidden" name="attendance_status" value="absent" />
+                            <button type="submit" class="att-mark {% if row.attendance_status == 'absent' %}active{% endif %}">x</button>
+                          </form>
+                        </td>
+                        <td>
+                          <form action="{{ url_for('update_attendance', row_id=row.id, search_name=search_name) }}" method="post" class="att-toggle-form">
+                            <input type="hidden" name="attendance_status" value="late" />
+                            <button type="submit" class="att-mark {% if row.attendance_status == 'late' %}active{% endif %}">x</button>
+                          </form>
+                        </td>
+                        <td>
+                          {% if row.attendance_status == 'present' %}
+                            100%
+                          {% elif row.attendance_status == 'late' %}
+                            50%
+                          {% else %}
+                            0%
+                          {% endif %}
+                        </td>
+                      </tr>
                     {% else %}
-                      <span class="approved-time">
-                        {{ row.approved_at.strftime('%d-%m-%Y %H:%M') if row.approved_at else '-' }}
-                      </span>
+                      <tr>
+                        <td colspan="5" class="empty">Nog geen data ingevoerd.</td>
+                      </tr>
+                    {% endfor %}
+                    {% if progress_rows %}
+                      <tr class="attendance-total-row">
+                        <td>Totaal</td>
+                        <td>{{ present_count }}</td>
+                        <td>{{ absent_count }}</td>
+                        <td>{{ late_count }}</td>
+                        <td>-</td>
+                      </tr>
                     {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
-                    <form action="{{ url_for('delete_progress', row_id=row.id, search_name=search_name) }}" method="post">
-                      <button
-                        type="submit"
-                        class="delete-btn"
-                        onclick="return confirm('Weet je zeker dat je deze leerling wilt verwijderen?');"
-                      >
-                        Verwijderen
-                      </button>
-                    </form>
-                  </div>
-                </td>
-              </tr>
+            <section class="report-block">
+              <h3>Recitatie en Huiswerk</h3>
+              <div class="table-wrap">
+                <table class="sheet-table compact-table">
+                  <thead>
+                    <tr>
+                      <th>Naam leerling</th>
+                      <th>Ayah</th>
+                      <th>Ingeleverd</th>
+                      <th>Nog open</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in progress_rows[:6] %}
+                      <tr>
+                        <td>{{ row.student_name }}</td>
+                        <td>{{ row.ayah_reference }}</td>
+                        <td>
+                          <form action="{{ url_for('update_homework', row_id=row.id, search_name=search_name) }}" method="post" class="att-toggle-form">
+                            <input type="hidden" name="homework" value="done" />
+                            <button type="submit" class="att-mark hw-done {% if row.homework_done %}active{% endif %}">x</button>
+                          </form>
+                        </td>
+                        <td>
+                          <form action="{{ url_for('update_homework', row_id=row.id, search_name=search_name) }}" method="post" class="att-toggle-form">
+                            <input type="hidden" name="homework" value="open" />
+                            <button type="submit" class="att-mark hw-open {% if not row.homework_done %}active{% endif %}">x</button>
+                          </form>
+                        </td>
+                      </tr>
+                    {% else %}
+                      <tr>
+                        <td colspan="4" class="empty">Nog geen data ingevoerd.</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <section class="report-block">
+            <h3>Feedback Quran</h3>
+            {% if student_names %}
+              <form action="{{ url_for('index') }}" method="get" class="feedback-selector-form">
+                <input type="hidden" name="search_name" value="{{ search_name }}" />
+                <label>
+                  Zoek leerling via menubar
+                  <select name="feedback_name" onchange="this.form.submit()" required>
+                    {% for name in student_names %}
+                      <option value="{{ name }}" {% if name == feedback_name %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+              </form>
+
+              {% if selected_feedback_row %}
+                <form action="{{ url_for('update_feedback', search_name=search_name) }}" method="post" class="feedback-editor-form">
+                  <input type="hidden" name="student_name" value="{{ selected_feedback_row.student_name }}" />
+
+                  <label>
+                    Feedback schrijven voor {{ selected_feedback_row.student_name }}
+                    <textarea name="feedback" rows="3" placeholder="Schrijf feedback...">{{ selected_feedback_row.feedback or '' }}</textarea>
+                  </label>
+
+                  <label>
+                    Beoordeling
+                    <select name="beoordeling_rating" required>
+                      {% for option in rating_options %}
+                        <option value="{{ option }}" {% if selected_feedback_row.rating_beoordeling == option %}selected{% endif %}>{{ option }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+
+                  <button type="submit">Opslaan feedback</button>
+                </form>
+              {% endif %}
             {% else %}
-              <tr>
-                <td colspan="8" class="empty">Nog geen data ingevoerd.</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+              <p class="empty">Nog geen leerlingen om feedback aan toe te voegen.</p>
+            {% endif %}
+          </section>
+
+          <section class="report-block">
+            <h3>Behaalde resultaten</h3>
+            {% if student_names %}
+              <form action="{{ url_for('index') }}" method="get" class="feedback-selector-form">
+                <input type="hidden" name="search_name" value="{{ search_name }}" />
+                <input type="hidden" name="feedback_name" value="{{ feedback_name }}" />
+                <label>
+                  Kies leerling via menubar
+                  <select name="result_name" onchange="this.form.submit()" required>
+                    {% for name in student_names %}
+                      <option value="{{ name }}" {% if name == result_name %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+              </form>
+
+              {% if selected_result_row %}
+                <form action="{{ url_for('update_ratings', row_id=selected_result_row.id, search_name=search_name) }}" method="post" class="feedback-editor-form">
+                  <label>
+                    Inzet
+                    <select name="inzet_rating" required>
+                      {% for option in rating_options %}
+                        <option value="{{ option }}" {% if selected_result_row.rating_inzet == option %}selected{% endif %}>{{ option }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+
+                  <label>
+                    Gedrag
+                    <select name="gedrag_rating" required>
+                      {% for option in rating_options %}
+                        <option value="{{ option }}" {% if selected_result_row.rating_gedrag == option %}selected{% endif %}>{{ option }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+
+                  <input type="hidden" name="beoordeling_rating" value="{{ selected_result_row.rating_beoordeling }}" />
+                  <button type="submit">Opslaan resultaten</button>
+                </form>
+              {% endif %}
+            {% else %}
+              <p class="empty">Nog geen leerlingen om resultaten op te slaan.</p>
+            {% endif %}
+          </section>
+        </div>
       </div>
+
     </section>
   </main>
+
+  <script>
+    (function () {
+      const studentChoice = document.getElementById('student-choice');
+      const newStudentWrap = document.getElementById('new-student-wrap');
+      const newStudentInput = document.getElementById('student-name-new');
+
+      const form = document.getElementById('plan-add-form');
+      const activityInput = document.getElementById('plan-activity-input');
+      const durationInput = document.getElementById('plan-duration-input');
+      const startInput = document.getElementById('plan-start-input');
+      const descriptionInput = document.getElementById('plan-description-input');
+      const endPreview = document.getElementById('plan-end-preview');
+      const datePreview = document.getElementById('plan-date-preview');
+      const savedBody = document.getElementById('plan-saved-body');
+      const storageKey = 'dagplanning_entries_v2';
+      const startKey = 'dagplanning_start_time_v2';
+      const entries = [];
+
+      function todayDateLabel() {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        return day + '-' + month + '-' + year;
+      }
+
+      function toMinutes(hhmm) {
+        const [hours, minutes] = hhmm.split(':').map(Number);
+        return (hours * 60) + minutes;
+      }
+
+      function toClock(totalMinutes) {
+        const minsInDay = 24 * 60;
+        const normalized = ((totalMinutes % minsInDay) + minsInDay) % minsInDay;
+        const hours = Math.floor(normalized / 60);
+        const minutes = normalized % 60;
+        return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+      }
+
+      function saveState() {
+        localStorage.setItem(storageKey, JSON.stringify(entries));
+        localStorage.setItem(startKey, startInput.value || '19:00');
+      }
+
+      function renderSavedEntries() {
+        if (!savedBody) {
+          return;
+        }
+
+        if (entries.length === 0) {
+          savedBody.innerHTML = '<tr><td colspan="7" class="empty">Nog geen activiteiten opgeslagen.</td></tr>';
+          return;
+        }
+
+        savedBody.innerHTML = entries.map((entry, index) => {
+          return '<tr>' +
+            '<td>' + (entry.date || '-') + '</td>' +
+            '<td>' + entry.activity + '</td>' +
+            '<td>' + entry.duration + ' min</td>' +
+            '<td>' + entry.start + '</td>' +
+            '<td>' + entry.end + '</td>' +
+            '<td>' + (entry.description || '-') + '</td>' +
+            '<td><button type="button" class="plan-delete-btn" data-index="' + index + '">Verwijderen</button></td>' +
+            '</tr>';
+        }).join('');
+
+        Array.from(savedBody.querySelectorAll('.plan-delete-btn')).forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.getAttribute('data-index'));
+            if (Number.isNaN(idx)) {
+              return;
+            }
+            entries.splice(idx, 1);
+            renderSavedEntries();
+            saveState();
+          });
+        });
+      }
+
+      function loadState() {
+        try {
+          const savedStart = localStorage.getItem(startKey);
+          if (savedStart && startInput) {
+            startInput.value = savedStart;
+          }
+
+          const rawEntries = localStorage.getItem(storageKey);
+          if (rawEntries) {
+            const parsedEntries = JSON.parse(rawEntries);
+            if (Array.isArray(parsedEntries)) {
+              parsedEntries.forEach((entry) => {
+                if (entry && entry.activity && entry.start && entry.end) {
+                  if (!entry.date) {
+                    entry.date = todayDateLabel();
+                  }
+                  entries.push(entry);
+                }
+              });
+            }
+          }
+        } catch (_error) {
+          // Ignore invalid localStorage data and keep defaults.
+        }
+      }
+
+      function updateEndPreview() {
+        if (!startInput || !durationInput || !endPreview) {
+          return;
+        }
+
+        const duration = Number(durationInput.value) || 0;
+        const end = toClock(toMinutes(startInput.value || '19:00') + duration);
+        endPreview.textContent = end;
+      }
+
+      function addEntry() {
+        const activity = (activityInput.value || '').trim();
+        if (!activity) {
+          return;
+        }
+
+        const duration = Number(durationInput.value) || 0;
+        const start = startInput.value || '19:00';
+        const end = toClock(toMinutes(start) + duration);
+        const description = (descriptionInput.value || '').trim();
+
+        entries.push({
+          date: todayDateLabel(),
+          activity,
+          duration,
+          start,
+          end,
+          description
+        });
+
+        startInput.value = end;
+        activityInput.selectedIndex = 0;
+        descriptionInput.value = '';
+        updateEndPreview();
+        renderSavedEntries();
+        saveState();
+      }
+
+      loadState();
+      renderSavedEntries();
+      updateEndPreview();
+
+      if (datePreview) {
+        datePreview.textContent = todayDateLabel();
+      }
+
+      if (durationInput) {
+        durationInput.addEventListener('change', updateEndPreview);
+      }
+
+      if (startInput) {
+        startInput.addEventListener('change', () => {
+          updateEndPreview();
+          saveState();
+        });
+      }
+
+      if (form) {
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+          addEntry();
+        });
+      }
+
+      if (activityInput) {
+        activityInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            addEntry();
+          }
+        });
+      }
+
+      function updateStudentInputMode() {
+        if (!studentChoice || !newStudentWrap || !newStudentInput) {
+          return;
+        }
+
+        const isNew = studentChoice.value === '__new__';
+        newStudentWrap.classList.toggle('hidden', !isNew);
+        newStudentInput.required = isNew;
+        if (!isNew) {
+          newStudentInput.value = '';
+        }
+      }
+
+      if (studentChoice) {
+        studentChoice.addEventListener('change', updateStudentInputMode);
+        updateStudentInputMode();
+      }
+
+    })();
+  </script>
 </body>
 </html>

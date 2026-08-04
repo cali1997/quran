@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quran Totaalrapport</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <main class="sheet-shell">
+    <section class="sheet-page">
+      <header class="sheet-title-row">
+        <span class="quran-mark">Quran</span>
+        <h1>Quran Leerling Totaalrapport</h1>
+        <span class="quran-mark">Quran</span>
+      </header>
+
+      <div class="table-header">
+        <p>Datum en tijd rapport: {{ generated_at }}</p>
+        <a href="{{ url_for('index') }}" class="pdf-btn">Terug naar dashboard</a>
+      </div>
+
+      <section class="report-block">
+        {% if rows %}
+          <div class="table-wrap">
+            <table class="sheet-table">
+              <thead>
+                <tr>
+                  <th>Naam</th>
+                  <th>Juz</th>
+                  <th>Ayah</th>
+                  <th>Datum/Tijd laatste update</th>
+                  <th>Aanwezigheid</th>
+                  <th>Huiswerk</th>
+                  <th>Inzet</th>
+                  <th>Gedrag</th>
+                  <th>Beoordeling</th>
+                  <th>Status</th>
+                  <th>Datum/Tijd goedkeuring</th>
+                  <th>Feedback</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in rows %}
+                  <tr>
+                    <td>{{ row.student_name }}</td>
+                    <td>{{ row.juz_number }}</td>
+                    <td>{{ row.ayah_reference }}</td>
+                    <td>{{ row.recorded_at.strftime('%d-%m-%Y %H:%M') }}</td>
+                    <td>
+                      {% if row.attendance_status == 'present' %}
+                        Aanwezig
+                      {% elif row.attendance_status == 'late' %}
+                        Te laat
+                      {% else %}
+                        Afwezig
+                      {% endif %}
+                    </td>
+                    <td>{{ 'Ingeleverd' if row.homework_done else 'Niet ingeleverd' }}</td>
+                    <td>{{ row.rating_inzet }}</td>
+                    <td>{{ row.rating_gedrag }}</td>
+                    <td>{{ row.rating_beoordeling }}</td>
+                    <td>{{ 'Goedgekeurd' if row.is_approved else 'Nog niet goedgekeurd' }}</td>
+                    <td>{{ row.approved_at.strftime('%d-%m-%Y %H:%M') if row.approved_at else '-' }}</td>
+                    <td>{{ row.feedback or '-' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="empty">Nog geen leerlingen beschikbaar voor rapportage.</p>
+        {% endif %}
+      </section>
+    </section>
+  </main>
+</body>
+</html>
