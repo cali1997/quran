@@ -28,8 +28,15 @@ app.config[
 ] = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-ADMIN_USERNAME = "adnaan"
-ADMIN_PASSWORD = "Insha-allah"
+ADMIN_CREDENTIALS = {
+    "adnaan": "Insha-allah",
+    "tiger": "Appel100@",
+}
+
+ADMIN_DISPLAY_NAMES = {
+    "adnaan": "معلم عدنان",
+    "tiger": "Ustaad Mohamed",
+}
 
 db = SQLAlchemy(app)
 
@@ -159,6 +166,7 @@ class StudentProgress(db.Model):
     __tablename__ = "student_progress"
 
     id = db.Column(db.Integer, primary_key=True)
+    owner_username = db.Column(db.String(64), nullable=False, default="adnaan")
     student_name = db.Column(db.String(120), nullable=False)
     juz_number = db.Column(db.Integer, nullable=False)
     ayah_reference = db.Column(db.String(120), nullable=False)
@@ -186,6 +194,18 @@ def wait_for_db(max_retries=30, wait_seconds=2):
 
 
 def ensure_schema_updates():
+    owner_col = db.session.execute(
+        text("SHOW COLUMNS FROM student_progress LIKE 'owner_username'")
+    ).fetchone()
+    if owner_col is None:
+        db.session.execute(
+            text(
+                "ALTER TABLE student_progress "
+                "ADD COLUMN owner_username VARCHAR(64) NOT NULL DEFAULT 'adnaan'"
+            )
+        )
+        db.session.commit()
+
     # Keep old databases compatible by adding the feedback column if needed.
     feedback_col = db.session.execute(
         text("SHOW COLUMNS FROM student_progress LIKE 'feedback'")
@@ -318,6 +338,18 @@ def split_surah_ayah(ayah_reference):
 
 def combine_surah_ayah(surah_name, ayah_number):
     return f"{surah_name.strip()}:{ayah_number.strip()}"
+
+
+def get_current_admin_username():
+    return session.get("admin_username", "adnaan")
+
+
+def get_admin_progress_query():
+    return StudentProgress.query.filter_by(owner_username=get_current_admin_username())
+
+
+def get_admin_row_or_404(row_id):
+    return get_admin_progress_query().filter_by(id=row_id).first_or_404()
 
 
 def register_pdf_fonts_once():
@@ -507,8 +539,9 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        if ADMIN_CREDENTIALS.get(username) == password:
             session["is_admin"] = True
+            session["admin_username"] = username
             flash("Succesvol ingelogd.", "success")
             return redirect(url_for("index"))
 
@@ -530,11 +563,14 @@ def index():
     search_name = request.args.get("search_name", "").strip()
     feedback_name = request.args.get("feedback_name", "").strip()
     result_name = request.args.get("result_name", "").strip()
+    admin_username = get_current_admin_username()
+    admin_display_name = ADMIN_DISPLAY_NAMES.get(admin_username, "معلم")
+    admin_query = get_admin_progress_query()
 
     all_student_names = sorted(
         {
             row.student_name
-            for row in StudentProgress.query.with_entities(StudentProgress.student_name).all()
+            for row in admin_query.with_entities(StudentProgress.student_name).all()
         },
         key=str.lower,
     )
@@ -542,7 +578,7 @@ def index():
     if search_name and search_name not in all_student_names:
         search_name = ""
 
-    query = StudentProgress.query
+    query = admin_query
 
     if search_name:
         query = query.filter(func.lower(StudentProgress.student_name) == search_name.lower())
@@ -625,13 +661,14 @@ def index():
         result_name=result_name,
         selected_result_row=selected_result_row,
         surah_options=SURAH_OPTIONS,
+        admin_display_name=admin_display_name,
     )
 
 
 @app.route("/rapport", methods=["GET"])
 @login_required
 def rapport_page():
-    rows = StudentProgress.query.order_by(StudentProgress.student_name.asc()).all()
+    rows = get_admin_progress_query().order_by(StudentProgress.student_name.asc()).all()
     generated_at = datetime.now().strftime("%d-%m-%Y %H:%M")
     return render_template("rapport.html", rows=rows, generated_at=generated_at)
 
@@ -639,6 +676,7 @@ def rapport_page():
 @app.route("/add", methods=["POST"])
 @login_required
 def add_progress():
+    admin_username = get_current_admin_username()
     selected_student = request.form.get("student_choice", "").strip()
     new_student_name = normalize_name(request.form.get("student_name_new", ""))
     student_name = normalize_name(selected_student if selected_student else new_student_name)
@@ -670,7 +708,7 @@ def add_progress():
         flash("Ongeldige huiswerkstatus.", "error")
         return redirect(url_for("index"))
 
-    existing_exact = StudentProgress.query.filter(
+    existing_exact = get_admin_progress_query().filter(
         func.lower(StudentProgress.student_name) == student_name.lower()
     ).first()
     if existing_exact and selected_student != "__new__":
@@ -696,7 +734,7 @@ def add_progress():
 
     if len(student_name.split()) == 1:
         fname = first_name(student_name)
-        same_first = StudentProgress.query.filter(
+        same_first = get_admin_progress_query().filter(
             func.lower(StudentProgress.student_name).like(f"{fname} %")
         ).first()
         if same_first:
@@ -713,6 +751,7 @@ def add_progress():
         return redirect(url_for("index"))
 
     row = StudentProgress(
+        owner_username=admin_username,
         student_name=student_name,
         juz_number=juz_number,
         ayah_reference=ayah_reference,
@@ -732,7 +771,7 @@ def add_progress():
 @login_required
 def approve(row_id):
     search_name = request.args.get("search_name", "").strip()
-    row = StudentProgress.query.get_or_404(row_id)
+    row = get_admin_row_or_404(row_id)
     if not row.is_approved:
         row.is_approved = True
         row.approved_at = datetime.utcnow()
@@ -748,7 +787,7 @@ def approve(row_id):
 @login_required
 def delete_progress(row_id):
     search_name = request.args.get("search_name", "").strip()
-    row = StudentProgress.query.get_or_404(row_id)
+    row = get_admin_row_or_404(row_id)
     db.session.delete(row)
     db.session.commit()
     flash("Leerlingrecord verwijderd.", "success")
@@ -765,7 +804,7 @@ def delete_by_name():
         flash("Kies eerst een leerling om te verwijderen.", "error")
         return redirect(url_for("index", search_name=search_name))
 
-    row = StudentProgress.query.filter(
+    row = get_admin_progress_query().filter(
         func.lower(StudentProgress.student_name) == student_name.lower()
     ).first()
 
@@ -813,7 +852,7 @@ def update_progress(row_id):
         flash("Ongeldige beoordelingskeuze.", "error")
         return redirect(url_for("index", search_name=search_name))
 
-    row = StudentProgress.query.get_or_404(row_id)
+    row = get_admin_row_or_404(row_id)
     row.ayah_reference = ayah_reference
     row.feedback = feedback
     row.attendance_status = attendance_value
@@ -839,7 +878,7 @@ def update_attendance(row_id):
         flash("Ongeldige aanwezigheidsstatus.", "error")
         return redirect(url_for("index", search_name=search_name))
 
-    row = StudentProgress.query.get_or_404(row_id)
+    row = get_admin_row_or_404(row_id)
     row.attendance_status = attendance_value
     row.is_present = bool_from_presence(attendance_value)
     db.session.commit()
@@ -858,7 +897,7 @@ def update_homework(row_id):
         flash("Ongeldige huiswerkstatus.", "error")
         return redirect(url_for("index", search_name=search_name))
 
-    row = StudentProgress.query.get_or_404(row_id)
+    row = get_admin_row_or_404(row_id)
     row.homework_done = bool_from_homework(homework_value)
     db.session.commit()
 
@@ -882,7 +921,7 @@ def update_feedback():
         flash("Ongeldige beoordelingskeuze.", "error")
         return redirect(url_for("index", search_name=search_name, feedback_name=student_name))
 
-    row = StudentProgress.query.filter(
+    row = get_admin_progress_query().filter(
         func.lower(StudentProgress.student_name) == student_name.lower()
     ).first()
     if row is None:
@@ -918,7 +957,7 @@ def update_ratings(row_id):
         flash("Ongeldige beoordelingskeuze.", "error")
         return redirect(url_for("index", search_name=search_name))
 
-    row = StudentProgress.query.get_or_404(row_id)
+    row = get_admin_row_or_404(row_id)
     row.rating_inzet = inzet_rating
     row.rating_gedrag = gedrag_rating
     row.rating_beoordeling = beoordeling_rating
@@ -931,7 +970,7 @@ def update_ratings(row_id):
 @app.route("/pdf/<int:row_id>", methods=["GET"])
 @login_required
 def download_student_pdf(row_id):
-    row = StudentProgress.query.get_or_404(row_id)
+    row = get_admin_row_or_404(row_id)
 
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
@@ -1002,7 +1041,7 @@ def download_student_pdf_by_name():
         flash("Kies eerst een leerling voor PDF-download.", "error")
         return redirect(url_for("index"))
 
-    row = StudentProgress.query.filter(
+    row = get_admin_progress_query().filter(
         func.lower(StudentProgress.student_name) == student_name.lower()
     ).first()
     if row is None:
@@ -1015,7 +1054,7 @@ def download_student_pdf_by_name():
 @app.route("/pdf-all", methods=["GET"])
 @login_required
 def download_all_students_pdf():
-    rows = StudentProgress.query.order_by(StudentProgress.student_name.asc()).all()
+    rows = get_admin_progress_query().order_by(StudentProgress.student_name.asc()).all()
 
     if not rows:
         flash("Nog geen leerlingen om als PDF te downloaden.", "error")
