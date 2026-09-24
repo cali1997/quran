@@ -152,13 +152,17 @@
                       </select>
                     </td>
                     <td>
-                      <select id="plan-duration-input" aria-label="Duur">
-                        <option value="15" selected>15 min</option>
-                        <option value="30">30 min</option>
-                        <option value="45">45 min</option>
-                        <option value="60">60 min</option>
-                        <option value="90">90 min</option>
-                      </select>
+                      <input
+                        type="number"
+                        id="plan-duration-input"
+                        class="plan-start-input"
+                        value="15"
+                        min="1"
+                        step="1"
+                        inputmode="numeric"
+                        aria-label="Duur in minuten"
+                        required
+                      />
                     </td>
                     <td>
                       <input type="time" id="plan-start-input" value="19:00" aria-label="Starttijd" />
@@ -583,7 +587,7 @@
       }
 
       if (durationInput) {
-        durationInput.addEventListener('change', updateEndPreview);
+        durationInput.addEventListener('input', updateEndPreview);
       }
 
       if (startInput) {
